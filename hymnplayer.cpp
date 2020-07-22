@@ -80,6 +80,7 @@ void HymnPlayer::load_player()
 void HymnPlayer::LoadSubTitle(std::string subPath)
 {
     ui->SubTitleLabel->setText("");
+    ui->NextSubTitleLabel->setText("");
 
     if (!IsFileExist(subPath))
     {
@@ -96,7 +97,7 @@ void HymnPlayer::LoadSubTitle(std::string subPath)
     SubtitleParser *parser = subParserFactory->getParser();
 
     sub = parser->getSubtitles();
-    ui->SubTitleLabel->move(10,10);
+    //ui->SubTitleLabel->move(10,10);
 }
 
 bool HymnPlayer::IsFileExist(std::string fileName)
@@ -292,17 +293,30 @@ void HymnPlayer::on_positionChanged(qint64 position)
 
     if (ui->CaptionButton->isChecked())
     {
-        for(SubtitleItem * element : sub)
+        double firstSubStartTime = sub[0]->getStartTime();
+        if (firstSubStartTime > position )
+            ui->NextSubTitleLabel->setText(QString::fromStdString(sub[0]->getText()));
+        else
         {
-            double startTime = element->getStartTime();
-            double endTime = element->getEndTime();
-            if( (startTime <= position) && (position <= endTime))
+            for(SubtitleItem * element : sub)
             {
-                ui->SubTitleLabel->setText(QString::fromStdString(element->getText()));
-                break;
+                double startTime = element->getStartTime();
+                double endTime = element->getEndTime();
+
+                if( (startTime <= position) && (position <= endTime))
+                {
+                    unsigned int subNo = element->getSubNo();
+                    ui->SubTitleLabel->setText(QString::fromStdString(element->getText()));
+
+                    if (sub.size() > subNo)
+                        ui->NextSubTitleLabel->setText(QString::fromStdString(sub[subNo]->getText()));
+                    else
+                        ui->NextSubTitleLabel->setText("");
+                    break;
+                }
+                else
+                    ui->SubTitleLabel->setText("");
             }
-            else
-                ui->SubTitleLabel->setText("");
         }
     }
 }
@@ -483,9 +497,9 @@ void HymnPlayer::on_CaptionButton_toggled(bool checked)
         Icon = CaptionOnIcon;
     else
     {
-
         Icon = CaptionOffIcon;
         ui->SubTitleLabel->setText("");
+        ui->NextSubTitleLabel->setText("");
     }
     ui->CaptionButton->setIcon(Icon);
 }
@@ -513,13 +527,12 @@ void HymnPlayer::on_CaptionEditButton_toggled(bool checked)
             {
                 QString line = in.readLine();
                 line = line.simplified();
-                line = line.remove( "\t" );
                 if (!line.isEmpty())
                 {
                     if (PreLineEmpty)
                         SubTitleTextList.append(line);
                     else
-                        SubTitleTextList[SubTitleTextList.size()-1].append(line);
+                        SubTitleTextList[SubTitleTextList.size()-1].append("<br>"+line);
                     PreLineEmpty = false;
                 }
                 else
